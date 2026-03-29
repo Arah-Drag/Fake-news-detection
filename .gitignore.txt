@@ -1,0 +1,12 @@
+venv/
+models/
+plots/
+__pycache__/
+*.pkl
+*.pyc
+.env
+*.egg-info/
+dist/
+build/
+.DS_Store
+Thumbs.db
