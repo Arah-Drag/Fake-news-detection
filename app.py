@@ -1,9 +1,3 @@
-# =============================================================================
-# app.py
-# Streamlit web application for the Fake News Detection System.
-# Run: streamlit run app.py
-# =============================================================================
-
 import os
 import sys
 import re
@@ -15,9 +9,6 @@ import joblib
 import streamlit as st
 import nltk
 
-# ---------------------------------------------------------------------------
-# NLTK resource check — download silently if missing
-# ---------------------------------------------------------------------------
 for resource in ["stopwords", "wordnet", "omw-1.4", "punkt"]:
     try:
         nltk.data.find(f"corpora/{resource}")
@@ -27,18 +18,12 @@ for resource in ["stopwords", "wordnet", "omw-1.4", "punkt"]:
 from nltk.corpus import stopwords
 from nltk.stem   import WordNetLemmatizer
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR   = os.path.join(PROJECT_ROOT, "models")
 DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
 sys.path.insert(0, PROJECT_ROOT)
 
-# ---------------------------------------------------------------------------
-# Auto-train models if not already saved
-# This runs automatically on Streamlit Cloud first deploy
-# ---------------------------------------------------------------------------
+
 def auto_train():
     """Train and save models if pkl files are missing."""
     lr_path = os.path.join(MODELS_DIR, "logistic_regression.pkl")
@@ -55,7 +40,6 @@ def auto_train():
             save_artefacts,
         )
 
-        # --- load data ---
         fake_path = os.path.join(DATA_DIR, "Fake.csv")
         true_path = os.path.join(DATA_DIR, "True.csv")
 
@@ -90,19 +74,12 @@ def auto_train():
         st.success("✅ Models trained and saved successfully! Refreshing...")
         st.rerun()
 
-
-# ---------------------------------------------------------------------------
-# Page config
-# ---------------------------------------------------------------------------
 st.set_page_config(
     page_title = "Fake News Detector",
     page_icon  = "🔍",
     layout     = "centered",
 )
 
-# ---------------------------------------------------------------------------
-# Custom CSS
-# ---------------------------------------------------------------------------
 st.markdown("""
 <style>
     .stApp { background: #0f1117; }
@@ -159,15 +136,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------------------
-# Run auto-train check before anything else
-# ---------------------------------------------------------------------------
 auto_train()
 
-
-# ---------------------------------------------------------------------------
-# Load artefacts (cached so they load only once per session)
-# ---------------------------------------------------------------------------
 @st.cache_resource(show_spinner="Loading models...")
 def load_models():
     vectorizer = joblib.load(os.path.join(MODELS_DIR, "tfidf_vectorizer.pkl"))
@@ -175,10 +145,6 @@ def load_models():
     nb_model   = joblib.load(os.path.join(MODELS_DIR, "naive_bayes.pkl"))
     return vectorizer, lr_model, nb_model
 
-
-# ---------------------------------------------------------------------------
-# Text cleaning
-# ---------------------------------------------------------------------------
 _STOP_WORDS = set(stopwords.words("english"))
 _LEMMATIZER = WordNetLemmatizer()
 
@@ -191,10 +157,6 @@ def clean_text(text: str) -> str:
     tokens = [_LEMMATIZER.lemmatize(t) for t in tokens]
     return " ".join(tokens)
 
-
-# ---------------------------------------------------------------------------
-# UI — Hero Header
-# ---------------------------------------------------------------------------
 st.markdown("""
 <div class="hero">
     <h1>🔍 Fake News Detector</h1>
@@ -204,9 +166,6 @@ st.markdown("""
 
 st.divider()
 
-# ---------------------------------------------------------------------------
-# UI — Input + Model Selection
-# ---------------------------------------------------------------------------
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -229,9 +188,6 @@ with col2:
         type                = "primary",
     )
 
-# ---------------------------------------------------------------------------
-# Prediction Logic
-# ---------------------------------------------------------------------------
 if predict_btn:
     if not news_input.strip():
         st.warning("Please paste some text before clicking Analyse.")
@@ -244,15 +200,13 @@ if predict_btn:
                 "Please wait for auto-training to complete or run python main.py locally."
             )
             st.stop()
-
-        # Step 1 — clean text
+            
         cleaned = clean_text(news_input)
 
         if not cleaned.strip():
             st.warning("Text became empty after cleaning. Please enter a longer article.")
             st.stop()
 
-        # Step 2 — vectorize
         X_vec = vectorizer.transform([cleaned])
 
         # Step 3 — predict
@@ -261,7 +215,6 @@ if predict_btn:
         nb_pred = nb_model.predict(X_vec)[0]
         nb_prob = nb_model.predict_proba(X_vec)[0]
 
-        # Step 4 — decide final prediction
         if model_choice == "Logistic Regression":
             final_pred = lr_pred
             confidence = lr_prob[final_pred]
@@ -273,13 +226,10 @@ if predict_btn:
             used       = "Naive Bayes"
 
         else:
-            # Both — majority vote with confidence-based tie breaking
             if lr_pred == nb_pred:
-                # both models agree
                 final_pred = lr_pred
                 confidence = (lr_prob[final_pred] + nb_prob[final_pred]) / 2
             else:
-                # tie — pick the model with higher confidence
                 lr_confidence = max(lr_prob)
                 nb_confidence = max(nb_prob)
                 if lr_confidence >= nb_confidence:
@@ -290,7 +240,6 @@ if predict_btn:
                     confidence = nb_confidence
             used = "Ensemble (majority vote)"
 
-        # Step 5 — display result
         label_text  = "FAKE NEWS" if final_pred == 0 else "REAL NEWS"
         emoji       = "❌" if final_pred == 0 else "✅"
         box_class   = "result-fake" if final_pred == 0 else "result-real"
@@ -306,7 +255,6 @@ if predict_btn:
         </div>
         """, unsafe_allow_html=True)
 
-        # Step 6 — per model breakdown (only for Both)
         if model_choice == "Both (majority vote)":
             st.markdown("&nbsp;")
             c1, c2 = st.columns(2)
@@ -323,7 +271,6 @@ if predict_btn:
                     f"Confidence: {max(nb_prob) * 100:.1f}%",
                 )
 
-        # Step 7 — stats footer
         word_count = len(news_input.split())
         st.caption(
             f"Input: {word_count} words  |  "
@@ -333,9 +280,6 @@ if predict_btn:
 
 st.divider()
 
-# ---------------------------------------------------------------------------
-# About section
-# ---------------------------------------------------------------------------
 with st.expander("ℹ️ About this app"):
     st.markdown("""
 **Fake News Detection System**
