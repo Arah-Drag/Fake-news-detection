@@ -1,30 +1,14 @@
-# =============================================================================
-# main.py
-# -----------------------------------------------------------------------------
-# End-to-end pipeline for the Fake News Detection System.
-#
-# Run:
-#   python main.py
-#
-# Prerequisites:
-#   pip install -r requirements.txt
-#   Place Fake.csv and True.csv inside the  data/  folder.
-# =============================================================================
-
 import os
 import sys
 import warnings
 warnings.filterwarnings("ignore")
 
 import matplotlib
-matplotlib.use("Agg")          # non-interactive backend — safe for all OSes
+matplotlib.use("Agg")         
 import matplotlib.pyplot as plt
 import seaborn           as sns
 from wordcloud           import WordCloud
 
-# ---------------------------------------------------------------------------
-# Add project root to path so sub-module imports work from any cwd
-# ---------------------------------------------------------------------------
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
@@ -38,10 +22,6 @@ from src.model         import (
 )
 from src.evaluation    import evaluate_model, plot_confusion_matrix, compare_models
 
-
-# ---------------------------------------------------------------------------
-# PATHS
-# ---------------------------------------------------------------------------
 DATA_DIR   = os.path.join(PROJECT_ROOT, "data")
 FAKE_CSV   = os.path.join(DATA_DIR, "Fake.csv")
 TRUE_CSV   = os.path.join(DATA_DIR, "True.csv")
@@ -52,9 +32,6 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(PLOTS_DIR,  exist_ok=True)
 
 
-# ===========================================================================
-# STEP 1 – DATA LOADING
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 1 : DATA LOADING")
 print("█" * 60)
@@ -64,10 +41,6 @@ print(df.head(3))
 print("\nDataset shape :", df.shape)
 print("Columns       :", list(df.columns))
 
-
-# ===========================================================================
-# STEP 2 – DATA PREPROCESSING
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 2 : DATA PREPROCESSING")
 print("█" * 60)
@@ -75,21 +48,15 @@ print("█" * 60)
 df_clean = preprocess_dataframe(df)
 print(df_clean[["text", "clean_text", "label"]].head(3).to_string(max_colwidth=80))
 
-
-# ===========================================================================
-# STEP 3 – EXPLORATORY DATA ANALYSIS (EDA)
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 3 : EXPLORATORY DATA ANALYSIS")
 print("█" * 60)
 
-# --- 3a. Class distribution (count) ---
 label_counts = df_clean["label"].value_counts()
 print("\nClass distribution:\n", label_counts.rename({0: "Fake", 1: "Real"}))
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4))
 
-# Bar chart
 axes[0].bar(["Fake (0)", "Real (1)"],
             [label_counts[0], label_counts[1]],
             color=["#e74c3c", "#2ecc71"], edgecolor="white", linewidth=0.8)
@@ -100,7 +67,6 @@ for bar, val in zip(axes[0].patches, [label_counts[0], label_counts[1]]):
                  bar.get_height() + 150, f"{val:,}",
                  ha="center", fontsize=10)
 
-# Pie chart
 axes[1].pie([label_counts[0], label_counts[1]],
             labels=["Fake", "Real"],
             colors=["#e74c3c", "#2ecc71"],
@@ -113,7 +79,6 @@ plt.savefig(os.path.join(PLOTS_DIR, "class_distribution.png"), dpi=150, bbox_inc
 plt.close()
 print(f"[INFO] Class distribution plot saved.")
 
-# --- 3b. Article length distribution ---
 df_clean["text_length"] = df_clean["clean_text"].str.split().str.len()
 
 fig, ax = plt.subplots(figsize=(9, 4))
@@ -129,7 +94,6 @@ plt.savefig(os.path.join(PLOTS_DIR, "length_distribution.png"), dpi=150, bbox_in
 plt.close()
 print(f"[INFO] Length distribution plot saved.")
 
-# --- 3c. Word clouds ---
 def make_wordcloud(text_series, title, color_func, save_path):
     combined_text = " ".join(text_series.dropna().tolist())
     wc = WordCloud(
@@ -163,10 +127,6 @@ make_wordcloud(
     os.path.join(PLOTS_DIR, "wordcloud_real.png"),
 )
 
-
-# ===========================================================================
-# STEP 4 – FEATURE ENGINEERING (TF-IDF)
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 4 : FEATURE ENGINEERING")
 print("█" * 60)
@@ -180,10 +140,6 @@ X_test_tfidf  = vectorizer.transform(X_test)
 print(f"  TF-IDF matrix shape — Train : {X_train_tfidf.shape}")
 print(f"  TF-IDF matrix shape — Test  : {X_test_tfidf.shape}\n")
 
-
-# ===========================================================================
-# STEP 5 – MODEL TRAINING
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 5 : MODEL TRAINING")
 print("█" * 60)
@@ -191,10 +147,6 @@ print("█" * 60)
 lr_model = train_logistic_regression(X_train_tfidf, y_train)
 nb_model = train_naive_bayes(X_train_tfidf, y_train)
 
-
-# ===========================================================================
-# STEP 6 – MODEL EVALUATION
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 6 : MODEL EVALUATION")
 print("█" * 60)
@@ -214,9 +166,6 @@ plot_confusion_matrix(
 )
 
 
-# ===========================================================================
-# STEP 7 – MODEL COMPARISON
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 7 : MODEL COMPARISON")
 print("█" * 60)
@@ -230,10 +179,6 @@ compare_models(
     save_path = os.path.join(PLOTS_DIR, "model_comparison.png"),
 )
 
-
-# ===========================================================================
-# STEP 8 – SAVE ARTEFACTS
-# ===========================================================================
 print("\n" + "█" * 60)
 print("  STEP 8 : SAVING ARTEFACTS")
 print("█" * 60)
